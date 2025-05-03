@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Notes.API.Database;
+using Notes.API.Diagnostics;
 using Notes.API.Endpoints;
 using Notes.API.Extensions;
 using OpenTelemetry.Logs;
@@ -10,19 +11,18 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, configuration) =>
-    configuration.ReadFrom.Configuration(context.Configuration));
-
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService("Notes"))
+    .ConfigureResource(resource => resource.AddService(DiagnosticsConfig.Name))
     .WithMetrics(metrics =>
     {
         metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation();
+
+        metrics.AddMeter(DiagnosticsConfig.Meter.Name);
 
         metrics.AddOtlpExporter();
     })
@@ -34,9 +34,11 @@ builder.Services.AddOpenTelemetry()
             .AddEntityFrameworkCoreInstrumentation();
 
         tracing.AddOtlpExporter();
-    });
+    })
+    .WithLogging(logging => logging.AddOtlpExporter());
 
-builder.Logging.AddOpenTelemetry(logging => logging.AddOtlpExporter());
+builder.Host.UseSerilog((context, configuration) =>
+    configuration.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
