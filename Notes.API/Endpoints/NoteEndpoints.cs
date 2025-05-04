@@ -34,22 +34,20 @@ public static class NoteEndpoints
             var note = await context.Notes
                 .FirstOrDefaultAsync(n => n.Id == id, ct);
 
-            if (note == null)
+            if (note is null)
             {
-                return Results.NotFound();
+                return Results.NotFound($"Note with ID -> {id} not found for update");
             }
 
             return Results.Ok(note);
         });
 
         app.MapPost("notes", async (
-            [FromBody] CreateNoteRequest request, 
+            [FromBody] CreateNoteRequest request,
             AppDbContext context,
-            ILoggerFactory loggerFactory,
+            ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var logger = loggerFactory.CreateLogger("NoteEndpoints");
-
             try
             {
                 if (request.Description.Length > CNotesLength.description)
@@ -88,15 +86,13 @@ public static class NoteEndpoints
         app.MapDelete("notes/{id:int}", async (
             int id,
             AppDbContext context,
-            ILoggerFactory loggerFactory,
+            ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var logger = loggerFactory.CreateLogger("NoteEndpoints");
-
             var note = await context.Notes
                 .FirstOrDefaultAsync(n => n.Id == id, ct);
 
-            if (note == null)
+            if (note is null)
             {
                 logger.LogWarning("Note with ID -> {Id} not found for update", id);
 
@@ -115,13 +111,11 @@ public static class NoteEndpoints
 
         app.MapPut("notes/{id:int}", async (
             int id,
-            [FromBody] CreateNoteRequest request,
+            [FromBody] UpdateNoteRequest request,
             AppDbContext context,
-            ILoggerFactory loggerFactory,
+            ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var logger = loggerFactory.CreateLogger("NoteEndpoints");
-
             var note = await context.Notes
                 .FirstOrDefaultAsync(n => n.Id == id, ct);
 
